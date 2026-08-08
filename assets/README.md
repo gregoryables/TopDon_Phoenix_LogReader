@@ -1,6 +1,6 @@
 This is an example log file recorded with a [TopDon Phoenix Max](https://www.topdon.us/collections/diagnostic-tools/products/phoenix-max) scan tool.
 
-You can open this file with the application in the /src directory or you can record your own with the TopDon.
+You can open this file with the application in the [src](/src) directory or you can record your own with the TopDon.
 
 **Please Note:**
 
