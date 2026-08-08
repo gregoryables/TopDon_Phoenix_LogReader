@@ -2,7 +2,7 @@ This is a personal project that I developed to analyze the recorded data from a 
 
 An example log file is included in the [assets](assets/) folder.
 
-Please Note:
+**Please Note:**
 
 I have currently only provided the ability to reliably open the ECM and TCM datalogs on a P2 Volvo XC90. If you record a log that crashes the application, I apologize in advance. Due to the undocumented nature of this log file architecture, you would need to understand the layout in order to modify my code. As of 08/08/2026, I have not documented any of the application logic.
 
