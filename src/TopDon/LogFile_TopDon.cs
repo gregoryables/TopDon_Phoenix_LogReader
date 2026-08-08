@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿// Copyright (c) Gregory Ables, FeilSend LLC. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+
+using System.Text;
 
 using TopDon_Phoenix_LogReader.LogFile;
 using TopDon_Phoenix_LogReader.TopDon;

@@ -1,4 +1,7 @@
-﻿using ScottPlot;
+﻿// Copyright (c) Gregory Ables, FeilSend LLC. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+
+using ScottPlot;
 using System;
 using System.Diagnostics;
 using System.IO;
