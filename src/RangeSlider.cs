@@ -1,19 +1,28 @@
 ﻿// Copyright (c) Gregory Ables, FeilSend LLC. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
+using System.ComponentModel;
+
 namespace TopDon_Phoenix_LogReader
 {
     public class RangeSlider : UserControl
     {
         // Properties for ranges
-        public float Minimum { get; set; } = 0;
-        public float Maximum { get; set; } = 100;
-        public float SelectedMin { get; set; } = 20;
-        public float SelectedMax { get; set; } = 80;
+        [DefaultValue(0)]
+        public float Minimum { get; set; }
+        [DefaultValue(100)]
+        public float Maximum { get; set; }
+        [DefaultValue(20)]
+        public float SelectedMin { get; set; }
+        [DefaultValue(80)]
+        public float SelectedMax { get; set; }
 
         // Design settings
-        public Color TrackColor { get; set; } = Color.LightGray;
+        [DefaultValue(typeof(Color), "LightGray")]
+        public Color TrackColor { get; set; }
+        [DefaultValue(typeof(Color), "DodgerBlue")]
         public Color SelectedTrackColor { get; set; } = Color.DodgerBlue;
+        [DefaultValue(typeof(Color), "DarkGray")]
         public Color ThumbColor { get; set; } = Color.DarkGray;
 
         // Events

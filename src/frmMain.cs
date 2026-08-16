@@ -2,125 +2,110 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
 using ScottPlot;
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Windows.Forms;
 
 namespace TopDon_Phoenix_LogReader
 {
     public partial class frmMain : Form
     {
         LogFile_TopDon logFile;
-        int signalToPlotIndex;
+        public string filepath { get; private set; }
+
+        int signalToPlotIndex = 0;
+
+        int rangeMin = 0;
+        int rangeMax = 100;
 
         int selectedMin;
         int selectedMax;
         int selectedRange;
-        int rangeMin = 0;
-        int rangeMax = 100;
 
-        bool xAxisConstrained = false;
         bool legendEnabled = true;
-        bool panel1Collapsed = false;
+        bool signalPanelCollapsed = false;
 
         ScottPlot.Plottables.Crosshair CH;
 
-        string[] validStatus = {"Active", "On", "P/N Connected", "Yes", "Start Approved" };
+        string[] validStatus = { "Active", "On", "P/N Connected", "Yes", "Start Approved" };
         string[] invalidStatus = { "Not Active", "Off", "P/N Disconnected", "No", "Start Not Approved" };
 
         Pixel currentMousePixel;
         Coordinates currentMouseCoordinates;
 
-        //Miracle.Settings.
+        string checkedColumnName = "Graphed";
 
-        Splitter splitter;
+        int dataGridViewContainerWidth = 0;
 
         public frmMain()
         {
             InitializeComponent();
-            //setupUserActionResponses();
+            InitializeDataGridView();
+            //InitializeUserActionResponses();
+
             configureCrosshairs();
 
             signalToPlotIndex = 0;
+
             selectedMin = rangeMin;
             selectedMax = rangeMax;
 
             this.visibleToolStripMenuItem.Checked = legendEnabled;
         }
 
-        public string filepath { get; private set; }
-
-        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        private void InitializeRange()
         {
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
-            {
-                openFileDialog.InitialDirectory = "C:\\";
-                openFileDialog.Filter = "TopDon Log Files (*.tc)|*.tc";
-                openFileDialog.FilterIndex = 1;
-                openFileDialog.RestoreDirectory = false;
-                openFileDialog.Multiselect = false;
-
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    logFile = new LogFile_TopDon();
-
-                    filepath = openFileDialog.FileName;
-                    this.Text = filepath;
-
-                    logFile.Open(filepath);
-
-                    buildTreeView();
-                    initializeRange();
-                }
-            }
-        }
-
-        private void buildTreeView()
-        {
-            treeView1.Nodes.Clear();
-            treeView1.CheckBoxes = true;
-
-            if (logFile != null)
-            {
-                TreeNode rootNode = new TreeNode("Log Channels");
-                rootNode.Tag = "TopDon Log Channels";
-
-
-                TreeNode childNode;
-                for (int i = 0; i < logFile.FrameDataLabels.Count; ++i)
-                {
-                    childNode = new TreeNode(logFile.FrameDataLabels[i].Label + ", " + logFile.FrameDataLabels[i].Unit);
-                    childNode.Checked = false;
-                    childNode.Tag = i.ToString();
-                    rootNode.Nodes.Add(childNode);
-                }
-                treeView1.Nodes.Add(rootNode);
-            }
-        }
-
-        private void initializeRange()
-        {
-            signalToPlotIndex = Convert.ToInt32(treeView1.Nodes[0].Nodes[0].Tag);
-
             rangeMin = 0;
             selectedMin = rangeMin;
             rangeMax = logFile.LogFrames[signalToPlotIndex].Values.Count;
             selectedMax = rangeMax;
         }
 
-        private void formsPlot1_VisibleChanged(object sender, EventArgs e)
+        private void InitializeDataGridView()
         {
+            DataGridViewCheckBoxColumn checkColumn = new DataGridViewCheckBoxColumn();
+            checkColumn.Name = checkedColumnName;
+            checkColumn.HeaderText = checkedColumnName;
+            checkColumn.Width = 60;
+            checkColumn.ReadOnly = false;
+            dataGridView1.Columns.Add(checkColumn);
+
+            dataGridView1.Columns.Add("Label", "Label");
+            dataGridView1.Columns.Add("Unit", "Unit");
+
+            dataGridView1.Columns[1].ReadOnly = true;
+            dataGridView1.Columns[2].ReadOnly = true;
+
+            dataGridView1.RowHeadersVisible = false;
         }
 
-        private void refreshToolStripMenuItem_Click(object sender, EventArgs e)
+        private void PopulateDataGridView()
         {
-            Replot();
-            //formsPlot1.PerformAutoScale();
+            dataGridView1.Rows.Clear();
+            dataGridViewContainerWidth = 0;
+
+            if (logFile != null)
+            {
+                int nextRow;
+
+                for (int i = 0; i < logFile.FrameDataLabels.Count; ++i)
+                {
+                    nextRow = dataGridView1.Rows.Add();
+                    dataGridView1.Rows[nextRow].Cells[0].Tag = i;
+                    dataGridView1.Rows[nextRow].Cells[1].Value = logFile.FrameDataLabels[i].Label;
+                    dataGridView1.Rows[nextRow].Cells[2].Value = logFile.FrameDataLabels[i].Unit;
+                }
+
+                for (int i = 0; i < dataGridView1.Columns.Count; ++i)
+                {
+                    dataGridView1.AutoResizeColumn(i, DataGridViewAutoSizeColumnMode.DisplayedCells);
+                    dataGridViewContainerWidth += dataGridView1.Columns[i].Width;
+                }
+                // Magic number added to adjust scrollbar out of redraw
+                dataGridViewContainerWidth += 25;
+                SetSplitContainerWidth();
+            }
         }
 
-        private void setupUserActionResponses()
+        private void InitializeUserActionResponses()
         {
             formsPlot1.UserInputProcessor.UserActionResponses.Clear();
 
@@ -145,26 +130,6 @@ namespace TopDon_Phoenix_LogReader
             formsPlot1.UserInputProcessor.UserActionResponses.Add(menuResponse);
         }
 
-        private void formsPlot1_MouseMove(object sender, MouseEventArgs e)
-        {
-            try
-            {
-                currentMousePixel = new Pixel(e.X, e.Y);
-                currentMouseCoordinates = formsPlot1.Plot.GetCoordinates(currentMousePixel);
-
-
-                //this.toolStripStatusLabel1.Text = $"X={currentMouseCoordinates.X:N3}, Y={currentMouseCoordinates.Y:N3}";
-                CH.Position = currentMouseCoordinates;
-                CH.VerticalLine.Text = $"{currentMouseCoordinates.X:N3}";
-                CH.HorizontalLine.Text = $"{currentMouseCoordinates.Y:N3}";
-                formsPlot1.Refresh();
-            }
-            catch
-            {
-                Debug.WriteLine("Crashed out in MouseMove");
-            }
-        }
-
         private void configureCrosshairs()
         {
             CH = formsPlot1.Plot.Add.Crosshair(0, 0);
@@ -178,11 +143,13 @@ namespace TopDon_Phoenix_LogReader
             {
                 formsPlot1.Plot.Clear();
 
-                for (int i = 0; i < treeView1.Nodes[0].Nodes.Count; i++)
+                for (int i = 0; i < dataGridView1.Rows.Count; i++)
                 {
-                    if (treeView1.Nodes[0].Nodes[i].Checked)
+                    bool isChecked = Convert.ToBoolean(dataGridView1.Rows[i].Cells[checkedColumnName].Value);
+
+                    if (isChecked)
                     {
-                        signalToPlotIndex = Convert.ToInt32(treeView1.Nodes[0].Nodes[i].Tag);
+                        signalToPlotIndex = Convert.ToInt32(dataGridView1.Rows[i].Cells[checkedColumnName].Tag);
                         selectedRange = selectedMax - selectedMin;
 
                         double[] xVals = new double[selectedMax];
@@ -229,10 +196,8 @@ namespace TopDon_Phoenix_LogReader
                         var scatterline = formsPlot1.Plot.Add.ScatterLine(xVals, yVals);
                         if (legendEnabled)
                         {
-                            scatterline.LegendText = treeView1.Nodes[0].Nodes[i].Text;
+                            scatterline.LegendText = logFile.LogFrames[signalToPlotIndex].Label + ", " + logFile.LogFrames[signalToPlotIndex].Unit;
                         }
-
-                        Debug.WriteLine($"Replot completed at {DateTime.Now.ToString()}");
                     }
                 }
 
@@ -248,12 +213,12 @@ namespace TopDon_Phoenix_LogReader
             }
         }
 
-        private void treeView1_BeforeCheck(object sender, TreeViewCancelEventArgs e)
+        private void SetSplitContainerWidth()
         {
-            if (e.Node == treeView1.Nodes[0])
-            {
-                e.Cancel = true;
-            }
+            this.SuspendLayout();
+
+            this.splitContainer1.SplitterDistance = dataGridViewContainerWidth;
+            this.ResumeLayout();
         }
 
         private void writeToOutput(int frameNumber, int substituteValue, string frameDataLabel, string frameDataValue)
@@ -262,7 +227,32 @@ namespace TopDon_Phoenix_LogReader
             Debug.WriteLine($"{frameNumber}, {substituteValue}");
         }
 
-        private void asCSVToolStripMenuItem_Click(object sender, EventArgs e)
+        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.InitialDirectory = "C:\\";
+                openFileDialog.Filter = "TopDon Log Files (*.tc)|*.tc";
+                openFileDialog.FilterIndex = 1;
+                openFileDialog.RestoreDirectory = false;
+                openFileDialog.Multiselect = false;
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    logFile = new LogFile_TopDon();
+
+                    filepath = openFileDialog.FileName;
+                    this.Text = filepath;
+
+                    logFile.Open(filepath);
+
+                    PopulateDataGridView();
+                    InitializeRange();
+                }
+            }
+        }
+
+        private void saveCSVToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (logFile != null)
             {
@@ -272,7 +262,7 @@ namespace TopDon_Phoenix_LogReader
                     saveFileDialog.Filter = "Comma Delimited Files (*.csv)|*.csv";
                     saveFileDialog.FileName = logFile.LogFileName + ".csv";
 
-                    if(saveFileDialog.ShowDialog() == DialogResult.OK)
+                    if (saveFileDialog.ShowDialog() == DialogResult.OK)
                     {
                         TextWriter text = new StreamWriter(saveFileDialog.FileName, false);
                         text.NewLine = "\r\n";
@@ -286,7 +276,7 @@ namespace TopDon_Phoenix_LogReader
 
                         for (int i = 0; i < logFile.LogFrames[0].Values.Count; i++)
                         {
-                            nextLine = $"{i+1};";
+                            nextLine = $"{i + 1};";
                             for (int j = 0; j < logFile.LogFrames.Count; j++)
                             {
                                 nextLine = nextLine + logFile.LogFrames[j].Values[i] + "; ";
@@ -301,11 +291,16 @@ namespace TopDon_Phoenix_LogReader
             }
         }
 
+        private void refreshToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Replot();
+        }
+
         private void constrainToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            using (SetChartRangeForm setChartRangeForm = new SetChartRangeForm(rangeMin,rangeMax))
+            using (SetChartRangeForm setChartRangeForm = new SetChartRangeForm(rangeMin, rangeMax))
             {
-                if(setChartRangeForm.ShowDialog() == DialogResult.OK)
+                if (setChartRangeForm.ShowDialog() == DialogResult.OK)
                 {
                     selectedMin = setChartRangeForm.SelectedMinimum;
                     selectedMax = setChartRangeForm.SelectedMaximum;
@@ -325,28 +320,67 @@ namespace TopDon_Phoenix_LogReader
             Replot();
         }
 
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (AboutBox aboutBox = new AboutBox())
+            {
+                aboutBox.ShowDialog();
+            }
+        }
+
+        private void formsPlot1_MouseMove(object sender, MouseEventArgs e)
+        {
+            currentMousePixel = new Pixel(e.X, e.Y);
+            currentMouseCoordinates = formsPlot1.Plot.GetCoordinates(currentMousePixel);
+
+
+            //this.toolStripStatusLabel1.Text = $"X={currentMouseCoordinates.X:N3}, Y={currentMouseCoordinates.Y:N3}";
+            CH.Position = currentMouseCoordinates;
+            CH.VerticalLine.Text = $"{currentMouseCoordinates.X:N3}";
+            CH.HorizontalLine.Text = $"{currentMouseCoordinates.Y:N3}";
+            formsPlot1.Refresh();
+        }
+
         private void splitContainer1_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             this.SuspendLayout();
-            if(this.splitContainer1.SplitterRectangle.Contains(e.Location) && panel1Collapsed == false)
+            if (this.splitContainer1.SplitterRectangle.Contains(e.Location) && signalPanelCollapsed == false)
             {
                 this.splitContainer1.SplitterDistance = this.splitContainer1.SplitterWidth;
-                panel1Collapsed = !panel1Collapsed;
+                signalPanelCollapsed = !signalPanelCollapsed;
                 this.ResumeLayout();
                 return;
             }
-            if (this.splitContainer1.SplitterRectangle.Contains(e.Location) && panel1Collapsed == true)
+            if (this.splitContainer1.SplitterRectangle.Contains(e.Location) && signalPanelCollapsed == true)
             {
-                this.splitContainer1.SplitterDistance = (this.splitContainer1.Width - this.splitContainer1.SplitterWidth) / 3;
-                panel1Collapsed = !panel1Collapsed;
+                this.splitContainer1.SplitterDistance = dataGridViewContainerWidth;
+                signalPanelCollapsed = !signalPanelCollapsed;
                 this.ResumeLayout();
                 return;
             }
         }
 
-        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        private void dataGridView1_CurrentCellDirtyStateChanged(object sender, EventArgs e)
         {
-            this.Close();
+            if (dataGridView1.IsCurrentCellDirty && dataGridView1.CurrentCell is DataGridViewCheckBoxCell)
+            {
+                dataGridView1.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            }
+        }
+
+        private void frmMain_Resize(object sender, EventArgs e)
+        {
+            if (dataGridViewContainerWidth > 0)
+            {
+                this.SuspendLayout();
+                this.splitContainer1.SplitterDistance = dataGridViewContainerWidth;
+                this.ResumeLayout();
+            }
         }
     }
 }

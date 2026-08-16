@@ -1,7 +1,4 @@
-﻿// Copyright (c) Gregory Ables, FeilSend LLC. All rights reserved.
-// Licensed under the MIT License. See LICENSE in the project root for license information.
-
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -9,10 +6,37 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Title>TopDon Phoenix Log Reader</Title>
+    <Authors>Gregory Ables</Authors>
+    <Company>FeilSend LLC</Company>
+    <Description>A utility for opening log files produced by the TopDon Phoenix Pro scan tool using it's VCI.
+
+This utility was made in part useful by the ScottPlot graphing library:
+
+https://github.com/scottplot/scottplot</Description>
+    <Copyright>2026, Gregory Ables</Copyright>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Cogwheel" Version="2.1.1" />
+    <PackageReference Include="log4net" Version="3.3.2" />
     <PackageReference Include="ScottPlot.WinForms" Version="5.1.59" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
   </ItemGroup>
 
 </Project>
